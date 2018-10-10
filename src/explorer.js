@@ -7,7 +7,6 @@ const config = require('./options.cfg');
 class Explorer {
     constructor() {
         this.definer = "require('lodash')";
-        // this.definer = "import _ from 'lodash';";
         this.path = './Apps/';
         this.excludedPaths = [];
         this.filesWithInjection = [];
@@ -16,7 +15,9 @@ class Explorer {
     }
 
     setPath(path) {
-        this.path = path;
+        if (path) {
+            this.path = path;
+        }
     }
 
     setLodashDefiner(definer) {
@@ -26,7 +27,6 @@ class Explorer {
     searchInjectionInFiles() {
         this.filesWithInjection = [];
         this.filesWithInjection = this._dirWalker(this.path);
-        console.log(this.filesWithInjection)
     }
 
     excludePath(path) {
@@ -152,7 +152,9 @@ class Explorer {
     }
 
     setCore(core) {
-        this.definer = core;
+        if (core) {
+            this.definer = core;
+        }
     }
 
     replaceCore(files) {
@@ -168,23 +170,25 @@ class Explorer {
     }
 }
 
-console.log(config);
 console.log('--------', 'Init');
 const rpl = new Explorer();
-config.exclude.forEach(path => rpl.excludePath(path));
 
-rpl.searchInjectionInFiles();
+console.log('--------', 'Setup');
+config.exclude.forEach(path => rpl.excludePath(path));
 rpl.setCore(config.core);
+rpl.setPath(config.path);
 
 console.log('--------', 'Start search');
+console.log('--------', 'Find files with injections');
+rpl.searchInjectionInFiles();
 const files = rpl.getFiles();
 
 // console.log('--------', files.length, 'files with old LoDash injected. Replacing core....');
 // const coreReplaced = rpl.replaceCore(files);
 
 // console.log('--------', coreReplaced, 'cores replaced. Replacing....');
-rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
-const filesWithReplacements = rpl.applyReplaceRules(files);
+// rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
+// const filesWithReplacements = rpl.applyReplaceRules(files);
 
 // console.log('--------', filesWithReplacements, 'files with replacements applied. Finding artefacts....');
 // rpl.setArtefactRules(config.artefacts);

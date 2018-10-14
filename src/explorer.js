@@ -1,6 +1,12 @@
+const babylon = require('babylon');
+const traverse = require("babel-traverse").default;
+const generator = require("babel-generator").default;
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
+const PromiseMigration = require('./configs/PromiseMigration');
+
+const promiseMigrator = new PromiseMigration();
 
 const config = require('./options.cfg');
 
@@ -75,7 +81,8 @@ class Explorer {
 
     _verifyFile(file) {
         let isFileCorrect = true;
-        if (path.extname(file).toLowerCase() !== '.js') {
+        if (!['.js', '.jsx', '.ts', '.tsx'].includes(path.extname(file).toLowerCase())) {
+        // if (!['.js', '.jsx'].includes(path.extname(file).toLowerCase())) {
             isFileCorrect = false;
         }
 
@@ -107,21 +114,32 @@ class Explorer {
     applyReplaceRules(files) {
         let count = 0;
         files.forEach(file => {
-            fs.readFile(file, 'utf8', (err, data) => {
-                if (err) {
-                    return console.log(err);
-                }
+            console.log(file)
+            const ast = babylon.parse(fs.readFileSync(file, 'utf8'), {
+                sourceType: 'module',
+                plugins: [
+                    // 'estree',
+                    'jsx',
+                    'typescript',
+                    // flow
+                    // doExpressions
+                    'objectRestSpread',
+                    'exportDefaultFrom',
+                    // decorators
+                    'classProperties'
+                    // 'exportExtensions',
+                    // 'asyncGenerators',
+                    // 'functionBind',
+                    // functionSent
+                    // 'dynamicImport'
+                    // templateInvalidEscapes
+                ]
+            });
 
-                let result = data;
-                for (const property in this.replaceRules) {
-                    if (this.replaceRules.hasOwnProperty(property)) {
-                        result = result.replace(new RegExp('\\.' + property + '\\(', 'g'), '.' + this.replaceRules[property] + '(');
-                    }
-                }
-
-                fs.writeFile(file, result, 'utf8', err => {
-                    if (err) return console.log(err);
-                });
+            traverse(ast, promiseMigrator.getVisitorObject());
+            // const o = generator(ast).code;
+            fs.writeFile(file, generator(ast).code, 'utf8', err => {
+                if (err) return console.log(err);
             });
         });
         return count;
@@ -183,14 +201,15 @@ console.log('--------', 'Find files with injections');
 rpl.searchInjectionInFiles();
 const files = rpl.getFiles();
 
-// console.log('--------', files.length, 'files with old LoDash injected. Replacing core....');
+console.log('--------', files.length, 'files use that lib....');
+fs.writeFileSync('outNEW', files.join('\r\n') , 'utf-8');
 // const coreReplaced = rpl.replaceCore(files);
 
 // console.log('--------', coreReplaced, 'cores replaced. Replacing....');
-// rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
-// const filesWithReplacements = rpl.applyReplaceRules(files);
+rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
+const filesWithReplacements = rpl.applyReplaceRules(files);
 
-// console.log('--------', filesWithReplacements, 'files with replacements applied. Finding artefacts....');
+console.log('--------', filesWithReplacements, 'files with replacements applied. Finding artefacts....');
 // rpl.setArtefactRules(config.artefacts);
 // const artefacts = rpl.findArtefacts(files);
 //
@@ -198,3 +217,21 @@ const files = rpl.getFiles();
 // rpl.saveArtefactsInfo('./artefacts.log', artefacts);
 
 console.log('--------', 'Done');
+
+function transform(AST) {
+    return estraverse.replace(AST, {
+        enter: function(node) {
+            if (
+                node.type === estraverse.Syntax.CallExpression &&
+                node.callee.property &&
+                node.callee.property.name === 'done'
+            ) {
+
+            }
+                // if (node.type === estraverse.Syntax.Literal) {
+             return node;
+                // }
+
+        }
+    });
+}

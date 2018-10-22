@@ -75,7 +75,7 @@ class Explorer {
 
     _verifyFile(file) {
         let isFileCorrect = true;
-        if (path.extname(file).toLowerCase() !== '.js') {
+        if (!['.js', '.jsx', '.ts', '.tsx', '.html'].includes(path.extname(file).toLowerCase())) {
             isFileCorrect = false;
         }
 
@@ -115,7 +115,7 @@ class Explorer {
                 let result = data;
                 for (const property in this.replaceRules) {
                     if (this.replaceRules.hasOwnProperty(property)) {
-                        result = result.replace(new RegExp('\\.' + property + '\\(', 'g'), '.' + this.replaceRules[property] + '(');
+                        result = result.replace(new RegExp(property, 'g'), this.replaceRules[property]);
                     }
                 }
 
@@ -183,14 +183,15 @@ console.log('--------', 'Find files with injections');
 rpl.searchInjectionInFiles();
 const files = rpl.getFiles();
 
-// console.log('--------', files.length, 'files with old LoDash injected. Replacing core....');
+console.log('--------', files.length, 'files use that lib....');
+fs.writeFileSync('outNEW', files.join('\r\n') , 'utf-8');
 // const coreReplaced = rpl.replaceCore(files);
 
 // console.log('--------', coreReplaced, 'cores replaced. Replacing....');
-// rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
-// const filesWithReplacements = rpl.applyReplaceRules(files);
+rpl.setReplaceRules(config.replace); // TODO standard methods een replaced also
+const filesWithReplacements = rpl.applyReplaceRules(files);
 
-// console.log('--------', filesWithReplacements, 'files with replacements applied. Finding artefacts....');
+console.log('--------', filesWithReplacements, 'files with replacements applied. Finding artefacts....');
 // rpl.setArtefactRules(config.artefacts);
 // const artefacts = rpl.findArtefacts(files);
 //
